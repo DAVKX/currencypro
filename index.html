@@ -1,44 +1,579 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CurrencyPro</title>
-<link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConversaMoeda Pro | Cotações e Investimentos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        deepBlue: '#0A1128',
+                        darkBlue: '#12263F',
+                        mediumBlue: '#1C3F80',
+                        lightBlue: '#7EA3E8',
+                        glassBg: 'rgba(255, 255, 255, 0.08)',
+                        glassBorder: 'rgba(255, 255, 255, 0.15)',
+                        up: '#10B981',
+                        down: '#EF4444',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass {
+                background: rgba(255, 255, 255, 0.07);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            }
+            .glass-hover {
+                transition: all 0.3s ease;
+            }
+            .glass-hover:hover {
+                background: rgba(255, 255, 255, 0.12);
+                transform: translateY(-2px);
+            }
+            .text-shadow {
+                text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            }
+            .fade-in {
+                animation: fadeIn 0.5s ease forwards;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            /* Animação suave da bandeira */
+            .lang-slider {
+                transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+                display: flex;
+                flex-direction: column;
+            }
+        }
+
+        body {
+            background: linear-gradient(135deg, #0A1128 0%, #12263F 50%, #1C3F80 100%);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.3);
+        }
+    </style>
 </head>
-<body>
-<header>
-<h1>CurrencyPro</h1>
-<div class="lang">🇧🇷 🇺🇸</div>
-</header>
+<body class="text-white">
 
-<div class="card">
-<h2>Cotações em Tempo Real</h2>
-<div id="rates">Carregando...</div>
-</div>
+    <!-- Cabeçalho -->
+    <header class="sticky top-0 z-50 glass mx-3 md:mx-6 mt-3 md:mt-4 rounded-2xl">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa fa-chart-line text-2xl text-lightBlue"></i>
+                <h1 class="text-xl md:text-2xl font-bold text-shadow" id="siteTitle">ConversaMoeda</h1>
+            </div>
 
-<div class="card">
-<h2>Conversor</h2>
-<input id="amount" type="number" value="1">
-<select id="from"><option>USD</option><option>BRL</option><option>EUR</option></select>
-<select id="to"><option>BRL</option><option>USD</option><option>EUR</option></select>
-<button onclick="convert()">Converter</button>
-<p id="result"></p>
-</div>
+            <!-- Seletor de Idioma CORRIGIDO -->
+            <div id="langContainer" class="w-12 h-10 rounded-lg glass overflow-hidden cursor-pointer select-none">
+                <div id="langWrapper" class="lang-slider w-full h-full">
+                    <!-- Bandeira Brasil -->
+                    <div class="lang-option h-full w-full flex items-center justify-center flex-shrink-0">
+                        <img src="https://i.postimg.cc/cH1Y32QJ/Picsart-26-06-04-16-22-35-153.png" alt="PT" class="w-6 h-4 rounded-sm">
+                    </div>
+                    <!-- Bandeira EUA -->
+                    <div class="lang-option h-full w-full flex items-center justify-center flex-shrink-0">
+                        <img src="https://i.postimg.cc/tTRP6whG/Picsart-26-06-04-16-21-58-711.jpg" alt="EN" class="w-6 h-4 rounded-sm">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
 
-<div class="card">
-<h2>Gráfico</h2>
-<canvas id="chart"></canvas>
-</div>
+    <!-- Navegação por Abas -->
+    <nav class="mx-3 md:mx-6 mt-4 glass rounded-xl p-2">
+        <div class="container mx-auto flex justify-center gap-2 md:gap-4 flex-wrap">
+            <button class="tab-btn active px-4 py-2 rounded-lg transition-all bg-mediumBlue/70 shadow-md" data-tab="dashboard" id="tabInicio">Início</button>
+            <button class="tab-btn px-4 py-2 rounded-lg transition-all hover:bg-white/10" data-tab="conversor" id="tabConversor">Conversor</button>
+            <button class="tab-btn px-4 py-2 rounded-lg transition-all hover:bg-white/10" data-tab="graficos" id="tabGraficos">Gráficos</button>
+            <button class="tab-btn px-4 py-2 rounded-lg transition-all hover:bg-white/10" data-tab="chat" id="tabChat">Assistente IA</button>
+        </div>
+    </nav>
 
-<div class="card">
-<h2>Chat de Ajuda</h2>
-<input id="chatInput" placeholder="Digite uma pergunta">
-<button onclick="chat()">Enviar</button>
-<p id="chatResponse"></p>
-</div>
+    <!-- Conteúdo Principal -->
+    <main class="container mx-auto px-4 py-6">
 
-<script src="script.js"></script>
+        <!-- Aba 1: Dashboard / Cotações -->
+        <section id="dashboard" class="tab-content fade-in">
+            <div class="glass rounded-2xl p-6 mb-6">
+                <h2 class="text-xl md:text-2xl font-semibold mb-5" id="destaqueTitulo">Destaque: Dólar Americano</h2>
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div>
+                        <p class="text-sm text-gray-300" id="cotacaoAtual">Cotação Atual (USD/BRL)</p>
+                        <p class="text-4xl md:text-5xl font-bold mt-2" id="valorUSD">Carregando...</p>
+                    </div>
+                    <div class="text-center">
+                        <div id="variacaoUSD" class="px-4 py-2 rounded-lg text-lg font-medium mb-3">Aguardando...</div>
+                        <!-- Botão de Atualização Manual -->
+                        <button onclick="atualizarTudo()" class="flex items-center gap-2 mx-auto px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-sm transition-all">
+                            <i class="fa fa-refresh"></i>
+                            <span id="textoAtualizar">Atualizar Agora</span>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mt-4" id="ultimaAtualizacao">Última atualização: --:-- | Fonte: AwesomeAPI</p>
+            </div>
+
+            <h3 class="text-lg font-medium mb-4" id="outrasMoedas">Outras Moedas e Ativos</h3>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div class="glass glass-hover rounded-xl p-4 text-center" id="cardEUR">
+                    <h4 class="font-medium">EUR/BRL</h4>
+                    <p class="text-xl font-bold mt-2">---</p>
+                    <p class="text-sm mt-1">0.00%</p>
+                </div>
+                <div class="glass glass-hover rounded-xl p-4 text-center" id="cardGBP">
+                    <h4 class="font-medium">GBP/BRL</h4>
+                    <p class="text-xl font-bold mt-2">---</p>
+                    <p class="text-sm mt-1">0.00%</p>
+                </div>
+                <div class="glass glass-hover rounded-xl p-4 text-center" id="cardJPY">
+                    <h4 class="font-medium">JPY/BRL</h4>
+                    <p class="text-xl font-bold mt-2">---</p>
+                    <p class="text-sm mt-1">0.00%</p>
+                </div>
+                <div class="glass glass-hover rounded-xl p-4 text-center" id="cardCAD">
+                    <h4 class="font-medium">CAD/BRL</h4>
+                    <p class="text-xl font-bold mt-2">---</p>
+                    <p class="text-sm mt-1">0.00%</p>
+                </div>
+                <div class="glass glass-hover rounded-xl p-4 text-center" id="cardAUD">
+                    <h4 class="font-medium">AUD/BRL</h4>
+                    <p class="text-xl font-bold mt-2">---</p>
+                    <p class="text-sm mt-1">0.00%</p>
+                </div>
+                <div class="glass glass-hover rounded-xl p-4 text-center" id="cardBTC">
+                    <h4 class="font-medium">BTC/BRL</h4>
+                    <p class="text-xl font-bold mt-2">---</p>
+                    <p class="text-sm mt-1">0.00%</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Aba 2: Conversor de Moedas -->
+        <section id="conversor" class="tab-content hidden fade-in">
+            <div class="glass rounded-2xl p-6">
+                <h2 class="text-xl md:text-2xl font-semibold mb-6" id="tituloConversor">Conversor de Moedas</h2>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <label class="block text-sm font-medium" id="labelValor">Valor</label>
+                        <input type="number" id="valorConversao" placeholder="Digite o valor" class="w-full p-4 rounded-xl bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-lightBlue">
+                        
+                        <label class="block text-sm font-medium mt-4" id="labelDe">De</label>
+                        <select id="moedaDe" class="w-full p-4 rounded-xl bg-white/10 border border-white/20 focus:outline-none">
+                            <option value="BRL">Real Brasileiro (BRL)</option>
+                            <option value="USD">Dólar Americano (USD)</option>
+                            <option value="EUR">Euro (EUR)</option>
+                            <option value="GBP">Libra Esterlina (GBP)</option>
+                            <option value="JPY">Iene Japonês (JPY)</option>
+                            <option value="CAD">Dólar Canadense (CAD)</option>
+                            <option value="AUD">Dólar Australiano (AUD)</option>
+                            <option value="BTC">Bitcoin (BTC)</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-4">
+                        <label class="block text-sm font-medium" id="labelPara">Para</label>
+                        <select id="moedaPara" class="w-full p-4 rounded-xl bg-white/10 border border-white/20 focus:outline-none">
+                            <option value="USD">Dólar Americano (USD)</option>
+                            <option value="BRL">Real Brasileiro (BRL)</option>
+                            <option value="EUR">Euro (EUR)</option>
+                            <option value="GBP">Libra Esterlina (GBP)</option>
+                            <option value="JPY">Iene Japonês (JPY)</option>
+                            <option value="CAD">Dólar Canadense (CAD)</option>
+                            <option value="AUD">Dólar Australiano (AUD)</option>
+                            <option value="BTC">Bitcoin (BTC)</option>
+                        </select>
+                        
+                        <button onclick="realizarConversao()" class="w-full mt-6 py-4 bg-mediumBlue hover:bg-blue-700 rounded-xl font-medium text-lg transition-all shadow-lg" id="btnConverter">Converter Agora</button>
+                    </div>
+                </div>
+                <div id="resultadoConversao" class="mt-8 p-6 rounded-xl bg-white/15 text-center text-2xl font-bold hidden"></div>
+                <p class="text-xs text-gray-400 mt-4" id="infoConversao">* Suporte a mais de 170 moedas e criptoativos | Dados atualizados em tempo real</p>
+            </div>
+        </section>
+
+        <!-- Aba 3: Gráficos -->
+        <section id="graficos" class="tab-content hidden fade-in">
+            <div class="glass rounded-2xl p-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+                    <h2 class="text-xl md:text-2xl font-semibold" id="tituloGrafico">Análise de Cotações</h2>
+                    <div class="flex gap-3 flex-wrap">
+                        <select id="parMoedaGrafico" class="p-2 rounded-lg bg-white/10 border border-white/20">
+                            <option value="USD-BRL">USD / BRL</option>
+                            <option value="EUR-BRL">EUR / BRL</option>
+                            <option value="GBP-BRL">GBP / BRL</option>
+                            <option value="JPY-BRL">JPY / BRL</option>
+                            <option value="CAD-BRL">CAD / BRL</option>
+                            <option value="AUD-BRL">AUD / BRL</option>
+                            <option value="BTC-BRL">BTC / BRL</option>
+                        </select>
+                        <select id="periodoGrafico" class="p-2 rounded-lg bg-white/10 border border-white/20">
+                            <option value="1">1 Dia</option>
+                            <option value="7">7 Dias</option>
+                            <option value="30">30 Dias</option>
+                            <option value="90">6 Meses</option>
+                            <option value="365">1 Ano</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="h-96">
+                    <canvas id="graficoPrincipal"></canvas>
+                </div>
+                <p class="text-xs text-gray-400 mt-4" id="infoGrafico">Dados históricos reais | Fonte: AwesomeAPI</p>
+            </div>
+        </section>
+
+        <!-- Aba 4: Chat IA Financeiro -->
+        <section id="chat" class="tab-content hidden fade-in">
+            <div class="glass rounded-2xl p-6 h-[75vh] flex flex-col">
+                <h2 class="text-xl md:text-2xl font-semibold mb-4" id="tituloChat">Assistente Financeiro Inteligente</h2>
+                <div id="areaMensagens" class="flex-1 bg-white/10 rounded-xl p-4 overflow-y-auto mb-4 flex flex-col gap-3">
+                    <div class="self-start max-w-[85%] bg-mediumBlue/40 p-3 rounded-xl rounded-tl-none">
+                        Olá! Sou seu assistente. Posso explicar cotações, indicar tendências e responder dúvidas sobre ConversaMoeda e investimentos. Em que posso ajudar?
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="entradaMensagem" placeholder="Ex: Qual moeda está melhor para investir hoje?" class="flex-1 p-4 rounded-xl bg-white/10 border border-white/20 focus:outline-none">
+                    <button onclick="enviarPergunta()" class="px-6 py-4 bg-mediumBlue hover:bg-blue-700 rounded-xl transition-all" id="btnEnviar">Enviar</button>
+                </div>
+                <p class="text-xs text-gray-400 mt-3 text-center" id="avisoChat">* As informações são referências, não constituem recomendação de compra ou venda.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="mt-8 mb-6 text-center text-sm text-gray-300">
+        <p>© 2025 ConversaMoeda Pro | Dados: AwesomeAPI</p>
+    </footer>
+
+    <script>
+        // ---------------- CONFIGURAÇÕES GERAIS ----------------
+        let idiomaAtual = 'pt';
+        let cotacoesCache = {};
+        const CACHE_TEMPO = 60 * 1000;
+        let ultimoCarregamento = 0;
+        let intervaloAtualizacao;
+
+        // ---------------- TROCA DE ABAS ----------------
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('bg-mediumBlue/70', 'shadow-md');
+                    b.classList.add('hover:bg-white/10');
+                });
+                btn.classList.add('bg-mediumBlue/70', 'shadow-md');
+                btn.classList.remove('hover:bg-white/10');
+
+                document.querySelectorAll('.tab-content').forEach(sec => sec.classList.add('hidden'));
+                document.getElementById(btn.dataset.tab).classList.remove('hidden');
+            });
+        });
+
+        // ---------------- TROCA DE IDIOMA CORRIGIDA ----------------
+        const langWrapper = document.getElementById('langWrapper');
+        document.getElementById('langContainer').addEventListener('click', () => {
+            idiomaAtual = idiomaAtual === 'pt' ? 'en' : 'pt';
+            // Move a bandeira para exibir apenas a selecionada
+            langWrapper.style.transform = idiomaAtual === 'pt' ? 'translateY(0)' : 'translateY(-100%)';
+            atualizarIdiomaInterface();
+        });
+
+        function atualizarIdiomaInterface() {
+            const textos = {
+                pt: {
+                    siteTitle: "ConversaMoeda",
+                    tabInicio: "Início",
+                    tabConversor: "Conversor",
+                    tabGraficos: "Gráficos",
+                    tabChat: "Assistente IA",
+                    destaqueTitulo: "Destaque: Dólar Americano",
+                    cotacaoAtual: "Cotação Atual (USD/BRL)",
+                    outrasMoedas: "Outras Moedas e Ativos",
+                    tituloConversor: "Conversor de Moedas",
+                    labelValor: "Valor",
+                    labelDe: "De",
+                    labelPara: "Para",
+                    btnConverter: "Converter Agora",
+                    infoConversao: "* Suporte a mais de 170 moedas e criptoativos | Dados atualizados em tempo real",
+                    tituloGrafico: "Análise de Cotações",
+                    infoGrafico: "Dados históricos reais | Fonte: AwesomeAPI",
+                    tituloChat: "Assistente Financeiro Inteligente",
+                    btnEnviar: "Enviar",
+                    avisoChat: "* As informações são referências, não constituem recomendação de compra ou venda.",
+                    textoAtualizar: "Atualizar Agora"
+                },
+                en: {
+                    siteTitle: "Exchange Pro",
+                    tabInicio: "Home",
+                    tabConversor: "Converter",
+                    tabGraficos: "Charts",
+                    tabChat: "AI Assistant",
+                    destaqueTitulo: "Highlight: US Dollar",
+                    cotacaoAtual: "Current Rate (USD/BRL)",
+                    outrasMoedas: "Other Currencies & Assets",
+                    tituloConversor: "Currency Converter",
+                    labelValor: "Amount",
+                    labelDe: "From",
+                    labelPara: "To",
+                    btnConverter: "Convert Now",
+                    infoConversao: "* Supports over 170 currencies and crypto assets | Real-time updated data",
+                    tituloGrafico: "Rate Analysis",
+                    infoGrafico: "Real historical data | Source: AwesomeAPI",
+                    tituloChat: "Smart Financial Assistant",
+                    btnEnviar: "Send",
+                    avisoChat: "* Information is for reference only, not investment advice.",
+                    textoAtualizar: "Update Now"
+                }
+            };
+
+            const t = textos[idiomaAtual];
+            Object.keys(t).forEach(chave => {
+                const el = document.getElementById(chave);
+                if (el) el.textContent = t[chave];
+            });
+        }
+
+        // ---------------- ATUALIZAÇÃO GERAL ----------------
+        async function atualizarTudo() {
+            await buscarCotacoes();
+            const parAtual = document.getElementById('parMoedaGrafico').value;
+            const diasAtual = document.getElementById('periodoGrafico').value;
+            carregarGrafico(parAtual, diasAtual);
+        }
+
+        // ---------------- BUSCA DE COTAÇÕES ----------------
+        async function buscarCotacoes() {
+            const agora = Date.now();
+            if (agora - ultimoCarregamento < CACHE_TEMPO && Object.keys(cotacoesCache).length > 0) {
+                atualizarInterfaceCotacoes(cotacoesCache);
+                return;
+            }
+
+            try {
+                const resposta = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,JPY-BRL,CAD-BRL,AUD-BRL,BTC-BRL');
+                const dados = await resposta.json();
+                cotacoesCache = dados;
+                ultimoCarregamento = Date.now();
+                atualizarInterfaceCotacoes(dados);
+                localStorage.setItem('cotacoesCache', JSON.stringify({ dados, timestamp: ultimoCarregamento }));
+            } catch (erro) {
+                console.warn("API principal indisponível, tentando cache...", erro);
+                const cacheSalvo = localStorage.getItem('cotacoesCache');
+                if (cacheSalvo) {
+                    const { dados } = JSON.parse(cacheSalvo);
+                    atualizarInterfaceCotacoes(dados);
+                } else {
+                    document.getElementById('valorUSD').textContent = 'Indisponível';
+                }
+            }
+        }
+
+        function atualizarInterfaceCotacoes(dados) {
+            const usd = dados.USDBRL;
+            document.getElementById('valorUSD').textContent = `R$ ${parseFloat(usd.bid).toFixed(2)}`;
+            const varPercUSD = parseFloat(usd.pctChange);
+            document.getElementById('variacaoUSD').textContent = `${varPercUSD >= 0 ? '+' : ''}${varPercUSD.toFixed(2)}%`;
+            document.getElementById('variacaoUSD').className = `px-4 py-2 rounded-lg text-lg font-medium mb-3 ${varPercUSD >= 0 ? 'bg-up/20 text-up' : 'bg-down/20 text-down'}`;
+
+            atualizarCard('EUR', dados.EURBRL);
+            atualizarCard('GBP', dados.GBPBRL);
+            atualizarCard('JPY', dados.JPYBRL, 3);
+            atualizarCard('CAD', dados.CADBRL);
+            atualizarCard('AUD', dados.AUDBRL);
+            atualizarCard('BTC', dados.BTCBRL, 2);
+
+            document.getElementById('ultimaAtualizacao').textContent = `Última atualização: ${new Date().toLocaleTimeString()} | Fonte: AwesomeAPI`;
+        }
+
+        function atualizarCard(sigla, dados, casasDecimais = 2) {
+            const card = document.getElementById(`card${sigla}`);
+            const valor = card.querySelector('p:nth-child(2)');
+            const variacao = card.querySelector('p:nth-child(3)');
+            valor.textContent = `R$ ${parseFloat(dados.bid).toFixed(casasDecimais)}`;
+            const pct = parseFloat(dados.pctChange);
+            variacao.textContent = `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
+            variacao.className = `text-sm mt-1 ${pct >= 0 ? 'text-up' : 'text-down'}`;
+        }
+
+        // ---------------- CONVERSÃO DE MOEDAS ----------------
+        async function realizarConversao() {
+            const valor = parseFloat(document.getElementById('valorConversao').value);
+            const de = document.getElementById('moedaDe').value;
+            const para = document.getElementById('moedaPara').value;
+            const resultadoEl = document.getElementById('resultadoConversao');
+
+            if (!valor || valor <= 0) {
+                resultadoEl.classList.remove('hidden');
+                resultadoEl.textContent = idiomaAtual === 'pt' ? 'Digite um valor válido' : 'Enter a valid amount';
+                return;
+            }
+
+            try {
+                const res = await fetch(`https://economia.awesomeapi.com.br/json/last/${de}-${para}`);
+                const dados = await res.json();
+                const taxa = parseFloat(dados[`${de}${para}`].bid);
+                const total = (valor * taxa).toFixed(2);
+
+                resultadoEl.classList.remove('hidden');
+                resultadoEl.textContent = `${valor.toFixed(2)} ${de} = ${total} ${para}`;
+            } catch {
+                resultadoEl.classList.remove('hidden');
+                resultadoEl.textContent = idiomaAtual === 'pt' ? 'Erro ao converter' : 'Conversion error';
+            }
+        }
+
+        // ---------------- GRÁFICOS COM DADOS REAIS ----------------
+        async function carregarGrafico(par = "USD-BRL", dias = 30) {
+            try {
+                const res = await fetch(`https://economia.awesomeapi.com.br/json/daily/${par}/${dias}`);
+                const dados = await res.json();
+                
+                if (!dados || dados.length === 0) {
+                    console.warn("Sem dados para o período solicitado");
+                    return;
+                }
+
+                const dadosOrdenados = dados.reverse();
+                const labels = dadosOrdenados.map(item => new Date(item.timestamp * 1000));
+                const valoresFechamento = dadosOrdenados.map(item => parseFloat(item.bid));
+
+                const ctx = document.getElementById('graficoPrincipal').getContext('2d');
+                if (window.meuGrafico) window.meuGrafico.destroy();
+
+                window.meuGrafico = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: `Fechamento ${par}`,
+                            data: valoresFechamento,
+                            borderColor: '#7EA3E8',
+                            backgroundColor: 'rgba(126, 163, 232, 0.2)',
+                            tension: 0.3,
+                            fill: true,
+                            borderWidth: 2,
+                            pointRadius: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: dias <= 7 ? 'day' : dias <= 90 ? 'week' : 'month',
+                                    displayFormats: { day: 'dd/MM', week: 'dd/MM', month: 'MM/yyyy' }
+                                },
+                                grid: { color: 'rgba(255,255,255,0.1)' },
+                                ticks: { color: '#ddd' }
+                            },
+                            y: {
+                                grid: { color: 'rgba(255,255,255,0.1)' },
+                                ticks: { color: '#ddd' }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `R$ ${context.raw.toFixed(2)}`;
+                                    }
+                                }
+                            },
+                            legend: { labels: { color: '#eee' } }
+                        }
+                    }
+                });
+            } catch (erro) {
+                console.error("Erro ao carregar gráfico:", erro);
+            }
+        }
+
+        document.getElementById('parMoedaGrafico').addEventListener('change', () => {
+            carregarGrafico(document.getElementById('parMoedaGrafico').value, document.getElementById('periodoGrafico').value);
+        });
+        document.getElementById('periodoGrafico').addEventListener('change', () => {
+            carregarGrafico(document.getElementById('parMoedaGrafico').value, document.getElementById('periodoGrafico').value);
+        });
+
+        // ---------------- ASSISTENTE IA ----------------
+        async function enviarPergunta() {
+            const entrada = document.getElementById('entradaMensagem');
+            const pergunta = entrada.value.trim();
+            if (!pergunta) return;
+
+            const chat = document.getElementById('areaMensagens');
+            chat.innerHTML += `<div class="self-end max-w-[85%] bg-lightBlue/30 p-3 rounded-xl rounded-tr-none">${pergunta}</div>`;
+            entrada.value = "";
+            chat.scrollTop = chat.scrollHeight;
+
+            setTimeout(async () => {
+                const resposta = await gerarRespostaIA(pergunta);
+                chat.innerHTML += `<div class="self-start max-w-[85%] bg-mediumBlue/40 p-3 rounded-xl rounded-tl-none">${resposta}</div>`;
+                chat.scrollTop = chat.scrollHeight;
+            }, 900);
+        }
+
+        async function gerarRespostaIA(texto) {
+            if (!cotacoesCache.USDBRL) return idiomaAtual === 'pt' ? 'Aguardando dados atualizados...' : 'Waiting for updated data...';
+            
+            const usd = parseFloat(cotacoesCache.USDBRL.bid);
+            const eur = parseFloat(cotacoesCache.EURBRL.bid);
+            const gbp = parseFloat(cotacoesCache.GBPBRL.bid);
+            const varUsd = parseFloat(cotacoesCache.USDBRL.pctChange);
+
+            if (/investir|melhor|comprar/i.test(texto)) {
+                if (idiomaAtual === 'pt') {
+                    return `Análise atual: Dólar está em R$ ${usd.toFixed(2)} (${varUsd >= 0 ? 'alta' : 'queda'} de ${Math.abs(varUsd).toFixed(2)}%). Euro R$ ${eur.toFixed(2)}, Libra R$ ${gbp.toFixed(2)}. Para proteção e diversificação, moedas fortes são boas referências. Sempre avalie seu perfil de risco.`;
+                } else {
+                    return `Current analysis: US Dollar is R$ ${usd.toFixed(2)} (${varUsd >= 0 ? 'up' : 'down'} ${Math.abs(varUsd).toFixed(2)}%). Euro R$ ${eur.toFixed(2)}, Pound R$ ${gbp.toFixed(2)}. Strong currencies are good for protection and diversification. Always consider your risk profile.`;
+                }
+            }
+
+            return idiomaAtual === 'pt' 
+                ? `Hoje o Dólar está cotado a R$ ${usd.toFixed(2)}, variação de ${varUsd.toFixed(2)}% em 24h. Posso explicar mais sobre tendências e funcionamento do mercado.`
+                : `Today the US Dollar is at R$ ${usd.toFixed(2)}, change of ${varUsd.toFixed(2)}% in 24h. I can explain more about trends and how the market works.`;
+        }
+
+        // ---------------- INICIALIZAÇÃO ----------------
+        window.onload = () => {
+            atualizarTudo();
+            intervaloAtualizacao = setInterval(atualizarTudo, 45000); // Atualiza automaticamente a cada 45s
+        };
+    </script>
+
 </body>
 </html>
