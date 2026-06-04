@@ -1,0 +1,19 @@
+body{
+background:linear-gradient(135deg,#081B3A,#1E4FB5);
+font-family:Arial,sans-serif;
+color:white;
+padding:20px;
+}
+.card{
+background:rgba(255,255,255,.1);
+backdrop-filter:blur(15px);
+padding:20px;
+margin:15px 0;
+border-radius:20px;
+}
+input,select,button{
+padding:10px;
+margin:5px;
+border-radius:10px;
+}
+canvas{background:white;border-radius:10px;}

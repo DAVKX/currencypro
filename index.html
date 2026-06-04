@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CurrencyPro</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<header>
+<h1>CurrencyPro</h1>
+<div class="lang">🇧🇷 🇺🇸</div>
+</header>
+
+<div class="card">
+<h2>Cotações em Tempo Real</h2>
+<div id="rates">Carregando...</div>
+</div>
+
+<div class="card">
+<h2>Conversor</h2>
+<input id="amount" type="number" value="1">
+<select id="from"><option>USD</option><option>BRL</option><option>EUR</option></select>
+<select id="to"><option>BRL</option><option>USD</option><option>EUR</option></select>
+<button onclick="convert()">Converter</button>
+<p id="result"></p>
+</div>
+
+<div class="card">
+<h2>Gráfico</h2>
+<canvas id="chart"></canvas>
+</div>
+
+<div class="card">
+<h2>Chat de Ajuda</h2>
+<input id="chatInput" placeholder="Digite uma pergunta">
+<button onclick="chat()">Enviar</button>
+<p id="chatResponse"></p>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
