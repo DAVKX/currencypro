@@ -274,10 +274,12 @@
     </footer>
 
     <script>
-        // ---------------- CONFIGURAÇÕES GERAIS ----------------
+        // ---------------- CONFIGURAÇÕES ----------------
         const GROQ_API_KEY = "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";
-        const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-        const GROQ_MODEL = "llama-3.1-8b-instant"; // Modelo leve e econômico
+        // ✅ Proxy para contornar bloqueio CORS e funcionar no GitHub Pages
+        const PROXY_URL = "https://corsproxy.io/?url=";
+        const GROQ_API_URL = PROXY_URL + encodeURIComponent("https://api.groq.com/openai/v1/chat/completions");
+        const GROQ_MODEL = "llama-3.1-8b-instant";
 
         let idiomaAtual = 'pt';
         let cotacoesCache = {};
@@ -380,7 +382,7 @@
             }
 
             try {
-                const resposta = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,JPY-BRL,CAD-BRL,AUD-BRL,BTC-BRL');
+                const resposta = await fetch(PROXY_URL + encodeURIComponent("https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,JPY-BRL,CAD-BRL,AUD-BRL,BTC-BRL"));
                 const dados = await resposta.json();
                 cotacoesCache = dados;
                 ultimoCarregamento = Date.now();
@@ -439,7 +441,7 @@
             }
 
             try {
-                const res = await fetch(`https://economia.awesomeapi.com.br/json/last/${de}-${para}`);
+                const res = await fetch(PROXY_URL + encodeURIComponent(`https://economia.awesomeapi.com.br/json/last/${de}-${para}`));
                 const dados = await res.json();
                 const taxa = parseFloat(dados[`${de}${para}`].bid);
                 const total = (valor * taxa).toFixed(2);
@@ -455,7 +457,7 @@
         // ---------------- GRÁFICOS ----------------
         async function carregarGrafico(par = "USD-BRL", dias = 30) {
             try {
-                const res = await fetch(`https://economia.awesomeapi.com.br/json/daily/${par}/${dias}`);
+                const res = await fetch(PROXY_URL + encodeURIComponent(`https://economia.awesomeapi.com.br/json/daily/${par}/${dias}`));
                 const dados = await res.json();
                 
                 if (!dados || dados.length === 0) return;
@@ -522,7 +524,7 @@
             carregarGrafico(document.getElementById('parMoedaGrafico').value, document.getElementById('periodoGrafico').value);
         });
 
-        // ---------------- ASSISTENTE IA COM GROQ ----------------
+        // ---------------- ASSISTENTE IA ----------------
         async function enviarPergunta() {
             const entrada = document.getElementById('entradaMensagem');
             const pergunta = entrada.value.trim();
@@ -556,7 +558,7 @@
                 Dólar Canadense: R$ ${parseFloat(cotacoesCache.CADBRL.bid).toFixed(2)}
                 Dólar Australiano: R$ ${parseFloat(cotacoesCache.AUDBRL.bid).toFixed(2)}
                 Bitcoin: R$ ${parseFloat(cotacoesCache.BTCBRL.bid).toFixed(2)}
-                Sempre lembre: informação é referência, não recomendação de investimento.
+                Sempre lembre: informação é apenas referência, não recomendação de investimento.
             `;
 
             try {
@@ -578,6 +580,7 @@
                 });
 
                 const dados = await resposta.json();
+                if (dados.error) throw new Error(dados.error.message);
                 return dados.choices[0].message.content.trim();
             } catch (erro) {
                 console.error("Erro na API Groq:", erro);
