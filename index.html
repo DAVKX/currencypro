@@ -57,7 +57,6 @@
                 from { opacity: 0; transform: translateY(10px); }
                 to { opacity: 1; transform: translateY(0); }
             }
-            /* Animação suave da bandeira */
             .lang-slider {
                 transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
                 display: flex;
@@ -96,14 +95,11 @@
                 <h1 class="text-xl md:text-2xl font-bold text-shadow" id="siteTitle">ConversaMoeda</h1>
             </div>
 
-            <!-- Seletor de Idioma CORRIGIDO -->
             <div id="langContainer" class="w-12 h-10 rounded-lg glass overflow-hidden cursor-pointer select-none">
                 <div id="langWrapper" class="lang-slider w-full h-full">
-                    <!-- Bandeira Brasil -->
                     <div class="lang-option h-full w-full flex items-center justify-center flex-shrink-0">
                         <img src="https://i.postimg.cc/cH1Y32QJ/Picsart-26-06-04-16-22-35-153.png" alt="PT" class="w-6 h-4 rounded-sm">
                     </div>
-                    <!-- Bandeira EUA -->
                     <div class="lang-option h-full w-full flex items-center justify-center flex-shrink-0">
                         <img src="https://i.postimg.cc/tTRP6whG/Picsart-26-06-04-16-21-58-711.jpg" alt="EN" class="w-6 h-4 rounded-sm">
                     </div>
@@ -136,7 +132,6 @@
                     </div>
                     <div class="text-center">
                         <div id="variacaoUSD" class="px-4 py-2 rounded-lg text-lg font-medium mb-3">Aguardando...</div>
-                        <!-- Botão de Atualização Manual -->
                         <button onclick="atualizarTudo()" class="flex items-center gap-2 mx-auto px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-sm transition-all">
                             <i class="fa fa-refresh"></i>
                             <span id="textoAtualizar">Atualizar Agora</span>
@@ -204,7 +199,7 @@
                     </div>
 
                     <div class="space-y-4">
-                        <label class="block text-sm font-medium" id="labelPara">Para</label>
+                        <label class="block text-sm font-medium mt-4" id="labelPara">Para</label>
                         <select id="moedaPara" class="w-full p-4 rounded-xl bg-white/10 border border-white/20 focus:outline-none">
                             <option value="USD">Dólar Americano (USD)</option>
                             <option value="BRL">Real Brasileiro (BRL)</option>
@@ -261,14 +256,14 @@
                 <h2 class="text-xl md:text-2xl font-semibold mb-4" id="tituloChat">Assistente Financeiro Inteligente</h2>
                 <div id="areaMensagens" class="flex-1 bg-white/10 rounded-xl p-4 overflow-y-auto mb-4 flex flex-col gap-3">
                     <div class="self-start max-w-[85%] bg-mediumBlue/40 p-3 rounded-xl rounded-tl-none">
-                        Olá! Sou seu assistente. Posso explicar cotações, indicar tendências e responder dúvidas sobre ConversaMoeda e investimentos. Em que posso ajudar?
+                        Olá! Sou seu assistente. Posso explicar cotações, indicar tendências e responder dúvidas sobre o mercado. Em que posso ajudar?
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <input type="text" id="entradaMensagem" placeholder="Ex: Qual moeda está melhor para investir hoje?" class="flex-1 p-4 rounded-xl bg-white/10 border border-white/20 focus:outline-none">
+                    <input type="text" id="entradaMensagem" placeholder="Ex: Qual moeda está melhor hoje?" class="flex-1 p-4 rounded-xl bg-white/10 border border-white/20 focus:outline-none">
                     <button onclick="enviarPergunta()" class="px-6 py-4 bg-mediumBlue hover:bg-blue-700 rounded-xl transition-all" id="btnEnviar">Enviar</button>
                 </div>
-                <p class="text-xs text-gray-400 mt-3 text-center" id="avisoChat">* As informações são referências, não constituem recomendação de compra ou venda.</p>
+                <p class="text-xs text-gray-400 mt-3 text-center" id="avisoChat">* As informações são referências, não constituem recomendação de investimento.</p>
             </div>
         </section>
 
@@ -280,6 +275,10 @@
 
     <script>
         // ---------------- CONFIGURAÇÕES GERAIS ----------------
+        const GROQ_API_KEY = "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";
+        const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+        const GROQ_MODEL = "llama-3.1-8b-instant"; // Modelo leve e econômico
+
         let idiomaAtual = 'pt';
         let cotacoesCache = {};
         const CACHE_TEMPO = 60 * 1000;
@@ -301,11 +300,10 @@
             });
         });
 
-        // ---------------- TROCA DE IDIOMA CORRIGIDA ----------------
+        // ---------------- TROCA DE IDIOMA ----------------
         const langWrapper = document.getElementById('langWrapper');
         document.getElementById('langContainer').addEventListener('click', () => {
             idiomaAtual = idiomaAtual === 'pt' ? 'en' : 'pt';
-            // Move a bandeira para exibir apenas a selecionada
             langWrapper.style.transform = idiomaAtual === 'pt' ? 'translateY(0)' : 'translateY(-100%)';
             atualizarIdiomaInterface();
         });
@@ -454,16 +452,13 @@
             }
         }
 
-        // ---------------- GRÁFICOS COM DADOS REAIS ----------------
+        // ---------------- GRÁFICOS ----------------
         async function carregarGrafico(par = "USD-BRL", dias = 30) {
             try {
                 const res = await fetch(`https://economia.awesomeapi.com.br/json/daily/${par}/${dias}`);
                 const dados = await res.json();
                 
-                if (!dados || dados.length === 0) {
-                    console.warn("Sem dados para o período solicitado");
-                    return;
-                }
+                if (!dados || dados.length === 0) return;
 
                 const dadosOrdenados = dados.reverse();
                 const labels = dadosOrdenados.map(item => new Date(item.timestamp * 1000));
@@ -508,9 +503,7 @@
                         plugins: {
                             tooltip: {
                                 callbacks: {
-                                    label: function(context) {
-                                        return `R$ ${context.raw.toFixed(2)}`;
-                                    }
+                                    label: context => `R$ ${context.raw.toFixed(2)}`
                                 }
                             },
                             legend: { labels: { color: '#eee' } }
@@ -529,7 +522,7 @@
             carregarGrafico(document.getElementById('parMoedaGrafico').value, document.getElementById('periodoGrafico').value);
         });
 
-        // ---------------- ASSISTENTE IA ----------------
+        // ---------------- ASSISTENTE IA COM GROQ ----------------
         async function enviarPergunta() {
             const entrada = document.getElementById('entradaMensagem');
             const pergunta = entrada.value.trim();
@@ -540,38 +533,64 @@
             entrada.value = "";
             chat.scrollTop = chat.scrollHeight;
 
-            setTimeout(async () => {
-                const resposta = await gerarRespostaIA(pergunta);
-                chat.innerHTML += `<div class="self-start max-w-[85%] bg-mediumBlue/40 p-3 rounded-xl rounded-tl-none">${resposta}</div>`;
-                chat.scrollTop = chat.scrollHeight;
-            }, 900);
+            chat.innerHTML += `<div id="resposta-carregando" class="self-start max-w-[85%] bg-mediumBlue/40 p-3 rounded-xl rounded-tl-none"><i class="fa fa-spinner fa-spin"></i> ${idiomaAtual === 'pt' ? 'Pensando...' : 'Thinking...'}</div>`;
+            chat.scrollTop = chat.scrollHeight;
+
+            const resposta = await gerarRespostaIA(pergunta);
+            document.getElementById('resposta-carregando').remove();
+            chat.innerHTML += `<div class="self-start max-w-[85%] bg-mediumBlue/40 p-3 rounded-xl rounded-tl-none">${resposta}</div>`;
+            chat.scrollTop = chat.scrollHeight;
         }
 
-        async function gerarRespostaIA(texto) {
+        async function gerarRespostaIA(pergunta) {
             if (!cotacoesCache.USDBRL) return idiomaAtual === 'pt' ? 'Aguardando dados atualizados...' : 'Waiting for updated data...';
-            
-            const usd = parseFloat(cotacoesCache.USDBRL.bid);
-            const eur = parseFloat(cotacoesCache.EURBRL.bid);
-            const gbp = parseFloat(cotacoesCache.GBPBRL.bid);
-            const varUsd = parseFloat(cotacoesCache.USDBRL.pctChange);
 
-            if (/investir|melhor|comprar/i.test(texto)) {
-                if (idiomaAtual === 'pt') {
-                    return `Análise atual: Dólar está em R$ ${usd.toFixed(2)} (${varUsd >= 0 ? 'alta' : 'queda'} de ${Math.abs(varUsd).toFixed(2)}%). Euro R$ ${eur.toFixed(2)}, Libra R$ ${gbp.toFixed(2)}. Para proteção e diversificação, moedas fortes são boas referências. Sempre avalie seu perfil de risco.`;
-                } else {
-                    return `Current analysis: US Dollar is R$ ${usd.toFixed(2)} (${varUsd >= 0 ? 'up' : 'down'} ${Math.abs(varUsd).toFixed(2)}%). Euro R$ ${eur.toFixed(2)}, Pound R$ ${gbp.toFixed(2)}. Strong currencies are good for protection and diversification. Always consider your risk profile.`;
-                }
+            const contexto = `
+                Idioma: ${idiomaAtual === 'pt' ? 'Português' : 'English'}.
+                Responda de forma CURTA, direta e objetiva.
+                Dados atuais:
+                Dólar: R$ ${parseFloat(cotacoesCache.USDBRL.bid).toFixed(2)} (${parseFloat(cotacoesCache.USDBRL.pctChange).toFixed(2)}%)
+                Euro: R$ ${parseFloat(cotacoesCache.EURBRL.bid).toFixed(2)} (${parseFloat(cotacoesCache.EURBRL.pctChange).toFixed(2)}%)
+                Libra: R$ ${parseFloat(cotacoesCache.GBPBRL.bid).toFixed(2)} (${parseFloat(cotacoesCache.GBPBRL.pctChange).toFixed(2)}%)
+                Iene: R$ ${parseFloat(cotacoesCache.JPYBRL.bid).toFixed(3)}
+                Dólar Canadense: R$ ${parseFloat(cotacoesCache.CADBRL.bid).toFixed(2)}
+                Dólar Australiano: R$ ${parseFloat(cotacoesCache.AUDBRL.bid).toFixed(2)}
+                Bitcoin: R$ ${parseFloat(cotacoesCache.BTCBRL.bid).toFixed(2)}
+                Sempre lembre: informação é referência, não recomendação de investimento.
+            `;
+
+            try {
+                const resposta = await fetch(GROQ_API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${GROQ_API_KEY}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: GROQ_MODEL,
+                        messages: [
+                            { role: "system", content: contexto },
+                            { role: "user", content: pergunta }
+                        ],
+                        temperature: 0.3,
+                        max_tokens: 150
+                    })
+                });
+
+                const dados = await resposta.json();
+                return dados.choices[0].message.content.trim();
+            } catch (erro) {
+                console.error("Erro na API Groq:", erro);
+                return idiomaAtual === 'pt' 
+                    ? "Erro temporário. Tente novamente em instantes." 
+                    : "Temporary error. Please try again later.";
             }
-
-            return idiomaAtual === 'pt' 
-                ? `Hoje o Dólar está cotado a R$ ${usd.toFixed(2)}, variação de ${varUsd.toFixed(2)}% em 24h. Posso explicar mais sobre tendências e funcionamento do mercado.`
-                : `Today the US Dollar is at R$ ${usd.toFixed(2)}, change of ${varUsd.toFixed(2)}% in 24h. I can explain more about trends and how the market works.`;
         }
 
         // ---------------- INICIALIZAÇÃO ----------------
         window.onload = () => {
             atualizarTudo();
-            intervaloAtualizacao = setInterval(atualizarTudo, 45000); // Atualiza automaticamente a cada 45s
+            intervaloAtualizacao = setInterval(atualizarTudo, 45000);
         };
     </script>
 
