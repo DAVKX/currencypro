@@ -1,0 +1,30 @@
+[build]
+  functions = "functions"
+  publish = "."
+```[[__LINK_ICON]](https://www.netlify.com/platform/core/functions/?f_link_type=f_linkinlinenote&flow_extra=eyJpbmxpbmVfZGlzcGxheV9wb3NpdGlvbiI6MCwiZG9jX3Bvc2l0aW9uIjowLCJkb2NfaWQiOiIzMzA1Y2Y3YWU5N2MyZjVjLWJhZTZmZTAyN2EwZjg1MzgifQ%3D%3D "[__LINK_ICON]")
+
+#### 2️⃣ `functions/groq-proxy.js`
+```javascript
+exports.handler = async (event) => {
+  try {
+    const GROQ_API_KEY = process.env.GROQ_API_KEY;
+    const resposta = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: event.body
+    });
+    const dados = await resposta.json();
+    return { statusCode: resposta.status, body: JSON.stringify(dados) };
+  } catch (erro) {
+    return { statusCode: 500, body: JSON.stringify({ erro: "Falha na requisição" }) };
+  }
+};
+```[[__LINK_ICON]](https://docs.netlify.com/functions/get-started/?f_link_type=f_linkinlinenote&flow_extra=eyJpbmxpbmVfZGlzcGxheV9wb3NpdGlvbiI6MCwiZG9jX3Bvc2l0aW9uIjowLCJkb2NfaWQiOiI5MTAzODk2MDVmZjgwNzQ5LTViM2YzYTJjZWFjMGU4NjMifQ%3D%3D "[__LINK_ICON]")
+
+#### 3️⃣ `index.html`
+Usar o código que eu te passei antes, já com a linha:
+```javascript
+const GROQ_PROXY_URL = "/.netlify/functions/groq-proxy";
