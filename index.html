@@ -619,9 +619,11 @@ async function gerarRespostaIA() {
 
         // ---------------- INICIALIZAÇÃO ----------------
         window.onload = () => {
-            atualizarTudo();
-            intervaloAtualizacao = setInterval(atualizarTudo, 45000);
-        };
+    inicializarContexto(); // ← linha nova adicionada
+    atualizarTudo();
+    intervaloAtualizacao = setInterval(atualizarTudo, 45000);
+};
+
     </script>
 
 </body>
