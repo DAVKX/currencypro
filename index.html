@@ -275,25 +275,8 @@
 
     <script>
         // ---------------- CONFIGURAÇÕES ----------------
-        const GROQ_API_KEY = "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";
-        
-        // ✅ Lista de proxies alternativos (se um cair, usa outro)
-        const PROXY_LIST = [
-            "https://api.allorigins.win/raw?url=",
-            "https://corsproxy.io/?url=",
-            "https://thingproxy.freeboard.io/fetch/"
-        ];
-        let proxyIndex = 0;
-
-        function getProxy() {
-            return PROXY_LIST[proxyIndex] || PROXY_LIST[0];
-        }
-
-        function trocarProxy() {
-            proxyIndex = (proxyIndex + 1) % PROXY_LIST.length;
-            console.log("Trocando para proxy:", getProxy());
-        }
-
+        // Endereço da função segura do Netlify
+        const GROQ_PROXY_URL = "/.netlify/functions/groq-proxy";
         const GROQ_MODEL = "llama-3.1-8b-instant";
 
         let idiomaAtual = 'pt';
@@ -389,7 +372,7 @@
         }
 
         // ---------------- BUSCA DE COTAÇÕES ----------------
-        async function buscarCotacoes(tentativa = 0) {
+        async function buscarCotacoes() {
             const agora = Date.now();
             if (agora - ultimoCarregamento < CACHE_TEMPO && Object.keys(cotacoesCache).length > 0) {
                 atualizarInterfaceCotacoes(cotacoesCache);
@@ -397,35 +380,20 @@
             }
 
             try {
-                const urlAlvo = "https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,JPY-BRL,CAD-BRL,AUD-BRL,BTC-BRL";
-                const resposta = await fetch(getProxy() + encodeURIComponent(urlAlvo), {
-                    cache: "no-cache",
-                    signal: AbortSignal.timeout(8000)
-                });
-
-                if (!resposta.ok) throw new Error(`Erro HTTP: ${resposta.status}`);
-                
+                const resposta = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,JPY-BRL,CAD-BRL,AUD-BRL,BTC-BRL");
                 const dados = await resposta.json();
                 cotacoesCache = dados;
                 ultimoCarregamento = Date.now();
                 atualizarInterfaceCotacoes(dados);
                 localStorage.setItem('cotacoesCache', JSON.stringify({ dados, timestamp: ultimoCarregamento }));
             } catch (erro) {
-                console.warn(`Erro na tentativa ${tentativa + 1}:`, erro);
-                if (tentativa < PROXY_LIST.length - 1) {
-                    trocarProxy();
-                    return buscarCotacoes(tentativa + 1);
-                }
-
-                // Se todos falharem, usa cache salvo
+                console.warn("API principal indisponível, tentando cache...", erro);
                 const cacheSalvo = localStorage.getItem('cotacoesCache');
                 if (cacheSalvo) {
                     const { dados } = JSON.parse(cacheSalvo);
                     atualizarInterfaceCotacoes(dados);
-                    document.getElementById('ultimaAtualizacao').textContent = `Usando dados salvos | Fonte: AwesomeAPI`;
                 } else {
                     document.getElementById('valorUSD').textContent = 'Indisponível';
-                    document.getElementById('variacaoUSD').textContent = 'Tente novamente mais tarde';
                 }
             }
         }
@@ -464,7 +432,7 @@
         }
 
         // ---------------- CONVERSÃO DE MOEDAS ----------------
-        async function realizarConversao(tentativa = 0) {
+        async function realizarConversao() {
             const valor = parseFloat(document.getElementById('valorConversao').value);
             const de = document.getElementById('moedaDe').value;
             const para = document.getElementById('moedaPara').value;
@@ -477,13 +445,7 @@
             }
 
             try {
-                const urlAlvo = `https://economia.awesomeapi.com.br/json/last/${de}-${para}`;
-                const res = await fetch(getProxy() + encodeURIComponent(urlAlvo), {
-                    signal: AbortSignal.timeout(8000)
-                });
-                
-                if (!res.ok) throw new Error(`Erro: ${res.status}`);
-                
+                const res = await fetch(`https://economia.awesomeapi.com.br/json/last/${de}-${para}`);
                 const dados = await res.json();
                 const taxa = parseFloat(dados[`${de}${para}`].bid);
                 const total = (valor * taxa).toFixed(2);
@@ -491,25 +453,15 @@
                 resultadoEl.classList.remove('hidden');
                 resultadoEl.textContent = `${valor.toFixed(2)} ${de} = ${total} ${para}`;
             } catch {
-                if (tentativa < PROXY_LIST.length - 1) {
-                    trocarProxy();
-                    return realizarConversao(tentativa + 1);
-                }
                 resultadoEl.classList.remove('hidden');
                 resultadoEl.textContent = idiomaAtual === 'pt' ? 'Erro ao converter' : 'Conversion error';
             }
         }
 
         // ---------------- GRÁFICOS ----------------
-        async function carregarGrafico(par = "USD-BRL", dias = 30, tentativa = 0) {
+        async function carregarGrafico(par = "USD-BRL", dias = 30) {
             try {
-                const urlAlvo = `https://economia.awesomeapi.com.br/json/daily/${par}/${dias}`;
-                const res = await fetch(getProxy() + encodeURIComponent(urlAlvo), {
-                    signal: AbortSignal.timeout(8000)
-                });
-                
-                if (!res.ok) throw new Error(`Erro: ${res.status}`);
-                
+                const res = await fetch(`https://economia.awesomeapi.com.br/json/daily/${par}/${dias}`);
                 const dados = await res.json();
                 
                 if (!dados || dados.length === 0) return;
@@ -565,11 +517,7 @@
                     }
                 });
             } catch (erro) {
-                console.error("Erro no gráfico:", erro);
-                if (tentativa < PROXY_LIST.length - 1) {
-                    trocarProxy();
-                    return carregarGrafico(par, dias, tentativa + 1);
-                }
+                console.error("Erro ao carregar gráfico:", erro);
             }
         }
 
@@ -600,7 +548,7 @@
             chat.scrollTop = chat.scrollHeight;
         }
 
-        async function gerarRespostaIA(pergunta, tentativa = 0) {
+        async function gerarRespostaIA(pergunta) {
             if (!cotacoesCache.USDBRL) {
                 return idiomaAtual === 'pt' 
                     ? 'Aguardando dados atualizados. Clique em "Atualizar" ou aguarde alguns segundos.' 
@@ -622,10 +570,9 @@
             `;
 
             try {
-                const resposta = await fetch(getProxy() + encodeURIComponent("https://api.groq.com/openai/v1/chat/completions"), {
+                const resposta = await fetch(GROQ_PROXY_URL, {
                     method: "POST",
                     headers: {
-                        "Authorization": `Bearer ${GROQ_API_KEY}`,
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
@@ -647,10 +594,6 @@
                 return dados.choices[0].message.content.trim();
             } catch (erro) {
                 console.error("Erro na IA:", erro);
-                if (tentativa < PROXY_LIST.length - 1) {
-                    trocarProxy();
-                    return gerarRespostaIA(pergunta, tentativa + 1);
-                }
                 return idiomaAtual === 'pt' 
                     ? "Erro temporário. Tente novamente em instantes." 
                     : "Temporary error. Please try again later.";
