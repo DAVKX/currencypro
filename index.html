@@ -529,76 +529,93 @@
         });
 
         // ---------------- ASSISTENTE IA ----------------
-        async function enviarPergunta() {
-            const entrada = document.getElementById('entradaMensagem');
-            const pergunta = entrada.value.trim();
-            if (!pergunta) return;
+// Array para guardar todo o histórico da conversa
+let historicoConversa = [];
 
-            const chat = document.getElementById('areaMensagens');
-            chat.innerHTML += `<div class="self-end max-w-[85%] bg-lightBlue/30 p-3 rounded-xl rounded-tr-none">${pergunta}</div>`;
-            entrada.value = "";
-            chat.scrollTop = chat.scrollHeight;
+// Inicializa o histórico com a mensagem de boas-vindas e contexto
+function inicializarContexto() {
+    const contexto = `
+        Idioma: ${idiomaAtual === 'pt' ? 'Português' : 'English'}.
+        Responda de forma curta, clara e objetiva.
+        Use sempre os dados de cotação mais recentes.
+        Lembre: as informações são apenas referência, não constituem recomendação de investimento.
+    `;
+    historicoConversa = [
+        { role: "system", content: contexto }
+    ];
+}
 
-            chat.innerHTML += `<div id="resposta-carregando" class="self-start max-w-[85%] bg-mediumBlue/40 p-3 rounded-xl rounded-tl-none"><i class="fa fa-spinner fa-spin"></i> ${idiomaAtual === 'pt' ? 'Pensando...' : 'Thinking...'}</div>`;
-            chat.scrollTop = chat.scrollHeight;
+async function enviarPergunta() {
+    const entrada = document.getElementById('entradaMensagem');
+    const pergunta = entrada.value.trim();
+    if (!pergunta) return;
 
-            const resposta = await gerarRespostaIA(pergunta);
-            document.getElementById('resposta-carregando').remove();
-            chat.innerHTML += `<div class="self-start max-w-[85%] bg-mediumBlue/40 p-3 rounded-xl rounded-tl-none">${resposta}</div>`;
-            chat.scrollTop = chat.scrollHeight;
-        }
+    // Adiciona a pergunta do usuário no histórico
+    historicoConversa.push({ role: "user", content: pergunta });
 
-        async function gerarRespostaIA(pergunta) {
-            if (!cotacoesCache.USDBRL) {
-                return idiomaAtual === 'pt' 
-                    ? 'Aguardando dados atualizados. Clique em "Atualizar" ou aguarde alguns segundos.' 
-                    : 'Waiting for updated data. Click "Update" or wait a few seconds.';
-            }
+    // Mostra a mensagem na tela
+    const chat = document.getElementById('areaMensagens');
+    chat.innerHTML += `<div class="self-end max-w-[85%] bg-lightBlue/30 p-3 rounded-xl rounded-tr-none">${pergunta}</div>`;
+    entrada.value = "";
+    chat.scrollTop = chat.scrollHeight;
 
-            const contexto = `
-                Idioma: ${idiomaAtual === 'pt' ? 'Português' : 'English'}.
-                Responda de forma CURTA, direta e objetiva.
-                Dados atuais:
-                Dólar: R$ ${parseFloat(cotacoesCache.USDBRL.bid).toFixed(2)} (${parseFloat(cotacoesCache.USDBRL.pctChange).toFixed(2)}%)
-                Euro: R$ ${parseFloat(cotacoesCache.EURBRL.bid).toFixed(2)} (${parseFloat(cotacoesCache.EURBRL.pctChange).toFixed(2)}%)
-                Libra: R$ ${parseFloat(cotacoesCache.GBPBRL.bid).toFixed(2)} (${parseFloat(cotacoesCache.GBPBRL.pctChange).toFixed(2)}%)
-                Iene: R$ ${parseFloat(cotacoesCache.JPYBRL.bid).toFixed(3)}
-                Dólar Canadense: R$ ${parseFloat(cotacoesCache.CADBRL.bid).toFixed(2)}
-                Dólar Australiano: R$ ${parseFloat(cotacoesCache.AUDBRL.bid).toFixed(2)}
-                Bitcoin: R$ ${parseFloat(cotacoesCache.BTCBRL.bid).toFixed(2)}
-                Sempre lembre: informação é apenas referência, seja sarcasmo as vezes.
-            `;
+    // Indicador de carregamento
+    chat.innerHTML += `<div id="resposta-carregando" class="self-start max-w-[85%] bg-mediumBlue/40 p-3 rounded-xl rounded-tl-none"><i class="fa fa-spinner fa-spin"></i> ${idiomaAtual === 'pt' ? 'Pensando...' : 'Thinking...'}</div>`;
+    chat.scrollTop = chat.scrollHeight;
 
-            try {
-                const resposta = await fetch(GROQ_PROXY_URL, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        model: GROQ_MODEL,
-                        messages: [
-                            { role: "system", content: contexto },
-                            { role: "user", content: pergunta }
-                        ],
-                        temperature: 0.3,
-                        max_tokens: 150
-                    }),
-                    signal: AbortSignal.timeout(10000)
-                });
+    // Obtém dados atualizados das cotações para enviar junto
+    const dadosAtuais = `
+        Dados de mercado de agora:
+        • Dólar (USD): R$ ${parseFloat(cotacoesCache.USDBRL?.bid || 0).toFixed(2)} (${parseFloat(cotacoesCache.USDBRL?.pctChange || 0).toFixed(2)}%)
+        • Euro (EUR): R$ ${parseFloat(cotacoesCache.EURBRL?.bid || 0).toFixed(2)} (${parseFloat(cotacoesCache.EURBRL?.pctChange || 0).toFixed(2)}%)
+        • Libra (GBP): R$ ${parseFloat(cotacoesCache.GBPBRL?.bid || 0).toFixed(2)} (${parseFloat(cotacoesCache.GBPBRL?.pctChange || 0).toFixed(2)}%)
+        • Iene (JPY): R$ ${parseFloat(cotacoesCache.JPYBRL?.bid || 0).toFixed(3)}
+        • Bitcoin (BTC): R$ ${parseFloat(cotacoesCache.BTCBRL?.bid || 0).toFixed(2)}
+    `;
 
-                if (!resposta.ok) throw new Error(`Erro: ${resposta.status}`);
+    // Atualiza o contexto com os dados mais recentes
+    historicoConversa[0].content = historicoConversa[0].content + "\n\n" + dadosAtuais;
 
-                const dados = await resposta.json();
-                if (dados.error) throw new Error(dados.error.message);
-                return dados.choices[0].message.content.trim();
-            } catch (erro) {
-                console.error("Erro na IA:", erro);
-                return idiomaAtual === 'pt' 
-                    ? "Erro temporário. Tente novamente em instantes." 
-                    : "Temporary error. Please try again later.";
-            }
-        }
+    // Envia TODA a conversa acumulada para a IA
+    const resposta = await gerarRespostaIA();
+
+    document.getElementById('resposta-carregando').remove();
+
+    // Adiciona a resposta da IA no histórico e na tela
+    historicoConversa.push({ role: "assistant", content: resposta });
+    chat.innerHTML += `<div class="self-start max-w-[85%] bg-mediumBlue/40 p-3 rounded-xl rounded-tl-none">${resposta}</div>`;
+    chat.scrollTop = chat.scrollHeight;
+}
+
+async function gerarRespostaIA() {
+    try {
+        const resposta = await fetch(GROQ_PROXY_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: GROQ_MODEL,
+                messages: historicoConversa, // ← AQUI É O SEGREDO: envia todo o histórico
+                temperature: 0.3,
+                max_tokens: 250
+            }),
+            signal: AbortSignal.timeout(12000)
+        });
+
+        if (!resposta.ok) throw new Error(`Erro: ${resposta.status}`);
+
+        const dados = await resposta.json();
+        if (dados.error) throw new Error(dados.error.message);
+        return dados.choices[0].message.content.trim();
+    } catch (erro) {
+        console.error("Erro na IA:", erro);
+        return idiomaAtual === 'pt' 
+            ? "Erro temporário. Tente novamente em instantes." 
+            : "Temporary error. Please try again later.";
+    }
+}
+
 
         // ---------------- INICIALIZAÇÃO ----------------
         window.onload = () => {
